@@ -20,6 +20,7 @@ func main() {
 		Title:  "텍스트-엑셀 변환기",
 		Width:  600,
 		Height: 600,
+		EnableDragAndDrop: true,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},

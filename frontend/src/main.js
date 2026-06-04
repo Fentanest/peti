@@ -1,5 +1,5 @@
 import './style.css';
-import {ConvertFiles, SelectDirectory} from '../wailsjs/go/main/App';
+import {ConvertFiles, SelectDirectory, SelectFiles} from '../wailsjs/go/main/App';
 
 let files = [];
 let outputDir = "";
@@ -30,8 +30,16 @@ const outputDirInput = document.getElementById('output-dir');
 const btnStart = document.getElementById('btn-start');
 const resultMsg = document.getElementById('result-msg');
 
-// We can use runtime.EventsOn later if needed for native drop, 
-// but Wails supports standard HTML5 drag and drop for files.
+// Native Wails Drop event
+window.runtime.EventsOn("wails:file-drop", (x, y, paths) => {
+    paths.forEach(path => {
+        if (path.toLowerCase().endsWith('.txt')) {
+            // Extract filename from path
+            const name = path.replace(/^.*[\\\\/]/, '');
+            addFile(path, name);
+        }
+    });
+});
 
 dropZone.addEventListener('dragover', (e) => {
     e.preventDefault();
@@ -46,47 +54,21 @@ dropZone.addEventListener('dragleave', (e) => {
 dropZone.addEventListener('drop', (e) => {
     e.preventDefault();
     dropZone.classList.remove('dragover');
-    
-    if (e.dataTransfer.files) {
-        for (let i = 0; i < e.dataTransfer.files.length; i++) {
-            const file = e.dataTransfer.files[i];
-            if (file.name.toLowerCase().endsWith('.txt')) {
-                // To get full path in Wails, file.path is available
-                // Wait, HTML5 File API in Wails might not expose full path unless configured. 
-                // Wait, in Wails v2, window.wails.runtime... wait, HTML drop gives 'path' property?
-                // Actually, Wails injects the 'path' property into the File object!
-                if(file.path) {
-                    addFile(file.path, file.name);
-                } else {
-                    addFile(file.name, file.name); // Fallback
-                }
-            }
-        }
-    }
+    // Actual paths are handled by wails:file-drop
 });
 
-// Click to select files (can use a hidden file input)
-const fileInput = document.createElement('input');
-fileInput.type = 'file';
-fileInput.multiple = true;
-fileInput.accept = '.txt';
-fileInput.style.display = 'none';
-document.body.appendChild(fileInput);
-
-dropZone.addEventListener('click', () => {
-    fileInput.click();
-});
-
-fileInput.addEventListener('change', (e) => {
-    for (let i = 0; i < e.target.files.length; i++) {
-        const file = e.target.files[i];
-        if (file.path) {
-            addFile(file.path, file.name);
-        } else {
-            addFile(file.name, file.name);
+dropZone.addEventListener('click', async () => {
+    try {
+        const selectedFiles = await SelectFiles();
+        if (selectedFiles && selectedFiles.length > 0) {
+            selectedFiles.forEach(path => {
+                const name = path.replace(/^.*[\\\\/]/, '');
+                addFile(path, name);
+            });
         }
+    } catch (err) {
+        console.error(err);
     }
-    fileInput.value = ''; // Reset
 });
 
 function addFile(path, name) {

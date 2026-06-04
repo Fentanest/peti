@@ -42,6 +42,20 @@ func (a *App) SelectDirectory() string {
 	return dir
 }
 
+// SelectFiles opens a dialog to select multiple text files
+func (a *App) SelectFiles() []string {
+	files, err := runtime.OpenMultipleFilesDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: "텍스트 파일 선택",
+		Filters: []runtime.FileFilter{
+			{DisplayName: "Text Files (*.txt)", Pattern: "*.txt"},
+		},
+	})
+	if err != nil {
+		return []string{}
+	}
+	return files
+}
+
 // ConvertFiles converts a list of EUC-KR txt files to an Excel file.
 func (a *App) ConvertFiles(filePaths []string, outputDir string) string {
 	if len(filePaths) == 0 {

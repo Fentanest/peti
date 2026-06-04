@@ -1,0 +1,51 @@
+name: Build Windows Application
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: build-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-windows:
+    runs-on: [self-hosted, Windows, X64, 233]
+    permissions:
+      contents: read
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.23'
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install Wails CLI
+      shell: powershell
+      run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+
+    - name: Build Wails App
+      shell: powershell
+      run: |
+        $env:Path += ";$env:USERPROFILE\go\bin"
+        wails build -platform windows/amd64
+
+    - name: Package Windows into Zip
+      shell: powershell
+      run: Compress-Archive -Path ./build/bin/txt2excel.exe -DestinationPath txt2excel-win64.zip
+
+    - name: Upload Windows artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: txt2excel-windows
+        path: txt2excel-win64.zip

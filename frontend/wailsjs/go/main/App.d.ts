@@ -4,3 +4,5 @@
 export function ConvertFiles(arg1:Array<string>,arg2:string):Promise<string>;
 
 export function SelectDirectory():Promise<string>;
+
+export function SelectFiles():Promise<Array<string>>;

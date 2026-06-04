@@ -9,3 +9,7 @@ export function ConvertFiles(arg1, arg2) {
 export function SelectDirectory() {
   return window['go']['main']['App']['SelectDirectory']();
 }
+
+export function SelectFiles() {
+  return window['go']['main']['App']['SelectFiles']();
+}

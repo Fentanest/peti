@@ -41,12 +41,8 @@ jobs:
         $env:Path += ";$env:USERPROFILE\go\bin"
         wails build -platform windows/amd64
 
-    - name: Package Windows into Zip
-      shell: powershell
-      run: Compress-Archive -Path ./build/bin/txt2excel.exe -DestinationPath txt2excel-win64.zip
-
     - name: Upload Windows artifact
       uses: actions/upload-artifact@v4
       with:
-        name: txt2excel-windows
-        path: txt2excel-win64.zip
+        name: peti2excel-windows
+        path: build/bin/peti2excel.exe

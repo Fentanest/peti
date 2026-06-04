@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -147,11 +148,51 @@ func (a *App) ConvertFiles(files []FileData, outputDir string) string {
 
 	// Generate filename
 	currentTime := time.Now().Format("20060102_150405")
-	outputName := filepath.Join(outputDir, fmt.Sprintf("결과_데이터_변환_%s.xlsx", currentTime))
+	tempXlsxName := filepath.Join(outputDir, fmt.Sprintf("결과_데이터_변환_%s.xlsx", currentTime))
+	finalXlsName := filepath.Join(outputDir, fmt.Sprintf("결과_데이터_변환_%s.xls", currentTime))
 
-	if err := f.SaveAs(outputName); err != nil {
-		return fmt.Sprintf("엑셀 저장 실패: %v", err)
+	if err := f.SaveAs(tempXlsxName); err != nil {
+		return fmt.Sprintf("엑셀(xlsx) 임시 저장 실패: %v", err)
 	}
 
-	return fmt.Sprintf("성공: %d행 변환 완료.\n저장 위치: %s", currentRow-2, outputName)
+	// Create VBScript to convert xlsx to xls using Excel COM
+	vbsCode := `Option Explicit
+Dim objExcel, objWorkbook
+Dim args, inputFile, outputFile
+Set args = WScript.Arguments
+If args.Count < 2 Then
+    WScript.Quit 1
+End If
+inputFile = args(0)
+outputFile = args(1)
+
+Set objExcel = CreateObject("Excel.Application")
+objExcel.Visible = False
+objExcel.DisplayAlerts = False
+
+Set objWorkbook = objExcel.Workbooks.Open(inputFile)
+' 56 is xlExcel8 (.xls)
+objWorkbook.SaveAs outputFile, 56
+objWorkbook.Close False
+objExcel.Quit
+`
+	vbsPath := filepath.Join(outputDir, "convert_temp.vbs")
+	if err := os.WriteFile(vbsPath, []byte(vbsCode), 0644); err != nil {
+		return fmt.Sprintf("VBS 스크립트 생성 실패: %v", err)
+	}
+
+	// Run VBScript
+	cmd := exec.Command("cscript", "//NoLogo", vbsPath, tempXlsxName, finalXlsName)
+	if err := cmd.Run(); err != nil {
+		// Clean up on failure
+		os.Remove(tempXlsxName)
+		os.Remove(vbsPath)
+		return fmt.Sprintf("Excel 변환 실패 (Excel이 설치되어 있는지 확인해주세요): %v", err)
+	}
+
+	// Clean up temporary files
+	os.Remove(tempXlsxName)
+	os.Remove(vbsPath)
+
+	return fmt.Sprintf("성공: %d행 변환 완료.\n저장 위치: %s", totalRows, finalXlsName)
 }

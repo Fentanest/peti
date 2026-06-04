@@ -39,7 +39,7 @@ jobs:
       shell: powershell
       run: |
         $env:Path += ";$env:USERPROFILE\go\bin"
-        wails build -platform windows/amd64
+        wails build -platform windows/amd64 -clean
 
     - name: Upload Windows artifact
       uses: actions/upload-artifact@v4

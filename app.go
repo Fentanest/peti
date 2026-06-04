@@ -1,8 +1,8 @@
 package main
 
 import (
-	"bufio"
 	"context"
+	"encoding/base64"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -14,6 +14,12 @@ import (
 	"golang.org/x/text/encoding/korean"
 	"golang.org/x/text/transform"
 )
+
+type FileData struct {
+	Name   string `json:"name"`
+	Path   string `json:"path"`
+	Base64 string `json:"base64"`
+}
 
 // App struct
 type App struct {
@@ -57,16 +63,12 @@ func (a *App) SelectFiles() []string {
 }
 
 // ConvertFiles converts a list of EUC-KR txt files to an Excel file.
-func (a *App) ConvertFiles(filePaths []string, outputDir string) string {
-	if len(filePaths) == 0 {
-		return "선택된 파일이 없습니다."
+func (a *App) ConvertFiles(files []FileData, outputDir string) string {
+	if len(files) == 0 {
+		return "실패: 선택된 파일이 없습니다."
 	}
 	if outputDir == "" {
-		// Use current directory if not specified
-		dir, err := os.Getwd()
-		if err == nil {
-			outputDir = dir
-		}
+		outputDir = "."
 	}
 
 	f := excelize.NewFile()
@@ -77,7 +79,7 @@ func (a *App) ConvertFiles(filePaths []string, outputDir string) string {
 	}()
 
 	sheetName := "Sheet1"
-	headers := []string{"순번", "주문/배송번호*", "이름", "상품명", "상품옵션", "수량", "전화번호"}
+	headers := []string{"순번", "주민등록번호*", "이름", "요청일자", "요청부서", "요청담당자", "연락처"}
 	
 	// Create a text format style for leading zeros
 	style, err := f.NewStyle(&excelize.Style{
@@ -98,22 +100,36 @@ func (a *App) ConvertFiles(filePaths []string, outputDir string) string {
 	f.SetRowStyle(sheetName, 1, 1, boldStyle)
 
 	currentRow := 2
+	totalRows := 0
 
-	for _, filePath := range filePaths {
-		file, err := os.Open(filePath)
-		if err != nil {
-			continue // skip error files or maybe return error
+	for _, fd := range files {
+		var contentBytes []byte
+		var err error
+
+		if fd.Base64 != "" {
+			contentBytes, err = base64.StdEncoding.DecodeString(fd.Base64)
+			if err != nil {
+				continue
+			}
+		} else if fd.Path != "" {
+			contentBytes, err = os.ReadFile(fd.Path)
+			if err != nil {
+				continue
+			}
+		} else {
+			continue
 		}
 
-		// EUC-KR decoder
+		// Decode EUC-KR to UTF-8
 		decoder := korean.EUCKR.NewDecoder()
-		reader := transform.NewReader(file, decoder)
-		scanner := bufio.NewScanner(reader)
+		utf8Content, _, err := transform.Bytes(decoder, contentBytes)
+		if err != nil {
+			continue
+		}
 
-		for scanner.Scan() {
-			line := scanner.Text()
+		lines := strings.Split(string(utf8Content), "\n")
+		for _, line := range lines {
 			line = strings.TrimSpace(line)
-
 			if len(line) > 0 && strings.Contains(line, "|") {
 				if !strings.HasSuffix(strings.ToLower(line), ".txt") {
 					parts := strings.Split(line, "|")
@@ -123,10 +139,10 @@ func (a *App) ConvertFiles(filePaths []string, outputDir string) string {
 						f.SetCellStyle(sheetName, cell, cell, style)
 					}
 					currentRow++
+					totalRows++
 				}
 			}
 		}
-		file.Close()
 	}
 
 	// Generate filename

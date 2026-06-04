@@ -5,7 +5,7 @@ let files = [];
 let outputDir = "";
 
 document.querySelector('#app').innerHTML = `
-    <h1>TXT to Excel Converter</h1>
+    <h1>Peti2Excel Converter</h1>
     
     <div id="drop-zone" class="drop-zone">
         여기에 .txt 파일을 드래그 앤 드롭 하세요<br>(또는 클릭하여 파일 선택)
@@ -30,13 +30,12 @@ const outputDirInput = document.getElementById('output-dir');
 const btnStart = document.getElementById('btn-start');
 const resultMsg = document.getElementById('result-msg');
 
-// Native Wails Drop event
+// Native Wails Drop event (works on some platforms/configurations)
 window.runtime.EventsOn("wails:file-drop", (x, y, paths) => {
     paths.forEach(path => {
         if (path.toLowerCase().endsWith('.txt')) {
-            // Extract filename from path
             const name = path.replace(/^.*[\\\\/]/, '');
-            addFile(path, name);
+            addFile(path, name, "");
         }
     });
 });
@@ -54,7 +53,26 @@ dropZone.addEventListener('dragleave', (e) => {
 dropZone.addEventListener('drop', (e) => {
     e.preventDefault();
     dropZone.classList.remove('dragover');
-    // Actual paths are handled by wails:file-drop
+    
+    // HTML5 File drag and drop fallback for Windows where wails:file-drop might not trigger
+    if (e.dataTransfer && e.dataTransfer.files) {
+        for (let i = 0; i < e.dataTransfer.files.length; i++) {
+            const file = e.dataTransfer.files[i];
+            if (file.name.toLowerCase().endsWith('.txt')) {
+                if (file.path) {
+                    addFile(file.path, file.name, "");
+                } else {
+                    // Read file as base64
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const base64 = event.target.result.split(',')[1]; // Remove data:text/plain;base64,
+                        addFile("", file.name, base64);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+        }
+    }
 });
 
 dropZone.addEventListener('click', async () => {
@@ -63,7 +81,7 @@ dropZone.addEventListener('click', async () => {
         if (selectedFiles && selectedFiles.length > 0) {
             selectedFiles.forEach(path => {
                 const name = path.replace(/^.*[\\\\/]/, '');
-                addFile(path, name);
+                addFile(path, name, "");
             });
         }
     } catch (err) {
@@ -71,9 +89,10 @@ dropZone.addEventListener('click', async () => {
     }
 });
 
-function addFile(path, name) {
-    if (!files.some(f => f.path === path)) {
-        files.push({ path, name });
+function addFile(path, name, base64) {
+    // Avoid duplicates by name since path might be empty
+    if (!files.some(f => f.name === name && f.path === path)) {
+        files.push({ path, name, base64 });
         renderFileList();
     }
 }
@@ -147,8 +166,8 @@ btnStart.addEventListener('click', async () => {
     btnStart.disabled = true;
     
     try {
-        const filePaths = files.map(f => f.path);
-        const result = await ConvertFiles(filePaths, outputDir);
+        // Pass the entire files array which matches the Go FileData struct
+        const result = await ConvertFiles(files, outputDir);
         resultMsg.innerText = result;
         if (result.includes("성공")) {
             resultMsg.style.color = "green";

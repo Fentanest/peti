@@ -71,6 +71,9 @@ func (a *App) ConvertFiles(files []FileData, outputDir string, format string) st
 	if outputDir == "" {
 		outputDir = "."
 	}
+	if absPath, err := filepath.Abs(outputDir); err == nil {
+		outputDir = absPath
+	}
 
 	f := excelize.NewFile()
 	defer func() {

@@ -1,5 +1,5 @@
 import './style.css';
-import {ConvertFiles, SelectDirectory, SelectFiles} from '../wailsjs/go/main/App';
+import { ConvertFiles, SelectDirectory, SelectFiles } from '../wailsjs/go/main/App';
 
 let files = [];
 let outputDir = "";
@@ -19,8 +19,8 @@ document.querySelector('#app').innerHTML = `
             <button id="btn-select-dir">경로 변경</button>
         </div>
         <div class="format-selector" style="margin-bottom: 15px;">
-            <label><input type="radio" name="format" value="xls" checked> .xls (구형, 내부망용)</label>
-            <label style="margin-left: 15px;"><input type="radio" name="format" value="xlsx"> .xlsx (최신형)</label>
+            <label><input type="radio" name="format" value="xls" checked> .xls (구형)</label>
+            <label style="margin-left: 15px;"><input type="radio" name="format" value="xlsx"> .xlsx (최신)</label>
         </div>
         <button id="btn-start" class="start-btn">변환 시작</button>
         <div id="result-msg"></div>
@@ -57,7 +57,7 @@ dropZone.addEventListener('dragleave', (e) => {
 dropZone.addEventListener('drop', (e) => {
     e.preventDefault();
     dropZone.classList.remove('dragover');
-    
+
     // HTML5 File drag and drop fallback for Windows where wails:file-drop might not trigger
     if (e.dataTransfer && e.dataTransfer.files) {
         for (let i = 0; i < e.dataTransfer.files.length; i++) {
@@ -112,21 +112,21 @@ function renderFileList() {
         const li = document.createElement('li');
         li.className = 'file-item';
         li.draggable = true;
-        
+
         li.innerHTML = `
             <span class="file-item-name">${file.name}</span>
             <button class="remove-btn" onclick="removeFile(${index})">삭제</button>
         `;
-        
+
         // Simple drag and drop reordering
         li.addEventListener('dragstart', (e) => {
             e.dataTransfer.setData('text/plain', index);
         });
-        
+
         li.addEventListener('dragover', (e) => {
             e.preventDefault();
         });
-        
+
         li.addEventListener('drop', (e) => {
             e.preventDefault();
             const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
@@ -138,7 +138,7 @@ function renderFileList() {
                 renderFileList();
             }
         });
-        
+
         fileList.appendChild(li);
     });
 }
@@ -164,13 +164,13 @@ btnStart.addEventListener('click', async () => {
         resultMsg.style.color = "red";
         return;
     }
-    
+
     resultMsg.innerText = "변환 중...";
     resultMsg.style.color = "black";
     btnStart.disabled = true;
-    
+
     const format = document.querySelector('input[name="format"]:checked').value;
-    
+
     try {
         // Pass the entire files array which matches the Go FileData struct
         const result = await ConvertFiles(files, outputDir, format);

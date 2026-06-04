@@ -18,6 +18,10 @@ document.querySelector('#app').innerHTML = `
             <input type="text" id="output-dir" readonly placeholder="기본 저장 경로 (현재 폴더)" />
             <button id="btn-select-dir">경로 변경</button>
         </div>
+        <div class="format-selector" style="margin-bottom: 15px;">
+            <label><input type="radio" name="format" value="xls" checked> .xls (구형, 내부망용)</label>
+            <label style="margin-left: 15px;"><input type="radio" name="format" value="xlsx"> .xlsx (최신형)</label>
+        </div>
         <button id="btn-start" class="start-btn">변환 시작</button>
         <div id="result-msg"></div>
     </div>
@@ -165,9 +169,11 @@ btnStart.addEventListener('click', async () => {
     resultMsg.style.color = "black";
     btnStart.disabled = true;
     
+    const format = document.querySelector('input[name="format"]:checked').value;
+    
     try {
         // Pass the entire files array which matches the Go FileData struct
-        const result = await ConvertFiles(files, outputDir);
+        const result = await ConvertFiles(files, outputDir, format);
         resultMsg.innerText = result;
         if (result.includes("성공")) {
             resultMsg.style.color = "green";

@@ -64,7 +64,7 @@ func (a *App) SelectFiles() []string {
 }
 
 // ConvertFiles converts a list of EUC-KR txt files to an Excel file.
-func (a *App) ConvertFiles(files []FileData, outputDir string) string {
+func (a *App) ConvertFiles(files []FileData, outputDir string, format string) string {
 	if len(files) == 0 {
 		return "실패: 선택된 파일이 없습니다."
 	}
@@ -155,8 +155,9 @@ func (a *App) ConvertFiles(files []FileData, outputDir string) string {
 		return fmt.Sprintf("엑셀(xlsx) 임시 저장 실패: %v", err)
 	}
 
-	// Create VBScript to convert xlsx to xls using Excel COM
-	vbsCode := `Option Explicit
+	if format == "xls" {
+		// Create VBScript to convert xlsx to xls using Excel COM
+		vbsCode := `Option Explicit
 Dim objExcel, objWorkbook
 Dim args, inputFile, outputFile
 Set args = WScript.Arguments
@@ -176,23 +177,27 @@ objWorkbook.SaveAs outputFile, 56
 objWorkbook.Close False
 objExcel.Quit
 `
-	vbsPath := filepath.Join(outputDir, "convert_temp.vbs")
-	if err := os.WriteFile(vbsPath, []byte(vbsCode), 0644); err != nil {
-		return fmt.Sprintf("VBS 스크립트 생성 실패: %v", err)
-	}
+		vbsPath := filepath.Join(outputDir, "convert_temp.vbs")
+		if err := os.WriteFile(vbsPath, []byte(vbsCode), 0644); err != nil {
+			return fmt.Sprintf("VBS 스크립트 생성 실패: %v", err)
+		}
 
-	// Run VBScript
-	cmd := exec.Command("cscript", "//NoLogo", vbsPath, tempXlsxName, finalXlsName)
-	if err := cmd.Run(); err != nil {
-		// Clean up on failure
+		// Run VBScript
+		cmd := exec.Command("cscript", "//NoLogo", vbsPath, tempXlsxName, finalXlsName)
+		if err := cmd.Run(); err != nil {
+			// Clean up on failure
+			os.Remove(tempXlsxName)
+			os.Remove(vbsPath)
+			return fmt.Sprintf("Excel 변환 실패 (Excel이 설치되어 있는지 확인해주세요): %v", err)
+		}
+
+		// Clean up temporary files
 		os.Remove(tempXlsxName)
 		os.Remove(vbsPath)
-		return fmt.Sprintf("Excel 변환 실패 (Excel이 설치되어 있는지 확인해주세요): %v", err)
+
+		return fmt.Sprintf("성공: %d행 변환 완료.\n저장 위치: %s", totalRows, finalXlsName)
 	}
 
-	// Clean up temporary files
-	os.Remove(tempXlsxName)
-	os.Remove(vbsPath)
-
-	return fmt.Sprintf("성공: %d행 변환 완료.\n저장 위치: %s", totalRows, finalXlsName)
+	// For xlsx format, keep the tempXlsxName as the final file
+	return fmt.Sprintf("성공: %d행 변환 완료.\n저장 위치: %s", totalRows, tempXlsxName)
 }

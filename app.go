@@ -146,8 +146,8 @@ func (a *App) ConvertFiles(files []FileData, outputDir string) string {
 	}
 
 	// Generate filename
-	timeStr := time.Now().Format("20060102_150405")
-	outputName := filepath.Join(outputDir, fmt.Sprintf("결과_변환_%s.xlsx", timeStr))
+	currentTime := time.Now().Format("20060102_150405")
+	outputName := filepath.Join(outputDir, fmt.Sprintf("결과_데이터_변환_%s.xlsx", currentTime))
 
 	if err := f.SaveAs(outputName); err != nil {
 		return fmt.Sprintf("엑셀 저장 실패: %v", err)

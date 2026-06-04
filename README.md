@@ -1,19 +1,9 @@
 # README
 
-## About
+## 이 프로젝트는
 
-This is the official Wails Vanilla template.
+소규모 금융사에서 공직윤리시스템조회를 위해 txt파일을 파싱해주는 프로그램.
 
-You can configure the project by editing `wails.json`. More information about the project settings can be found
-here: https://wails.io/docs/reference/project-config
+## 사용법
 
-## Live Development
-
-To run in live development mode, run `wails dev` in the project directory. This will run a Vite development
-server that will provide very fast hot reload of your frontend changes. If you want to develop in a browser
-and have access to your Go methods, there is also a dev server that runs on http://localhost:34115. Connect
-to this in your browser, and you can call your Go code from devtools.
-
-## Building
-
-To build a redistributable, production mode package, use `wails build`.
+프로그램 시행 후 Peti에서 내려받은 txt파일을 드래그 앤 드롭으로 넣으면 엑셀파일로 파싱됨.
